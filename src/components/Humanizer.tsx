@@ -7,6 +7,8 @@ export default function Humanizer() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [stats, setStats] = useState<{ wordCount: number; changesMade: number; readability: number } | null>(null);
   const [copied, setCopied] = useState(false);
+  const [passCount, setPassCount] = useState(0);
+  const [processingStep, setProcessingStep] = useState('');
 
   const handlePaste = useCallback(async () => {
     try {
@@ -17,19 +19,50 @@ export default function Humanizer() {
     }
   }, []);
 
-  const handleHumanize = useCallback(() => {
+  const runHumanizer = useCallback((multiPass = false) => {
     if (!input.trim()) return;
     
     setIsProcessing(true);
+    setPassCount(prev => multiPass ? prev + 1 : 1);
     
-    // Simulate processing time for realistic UX
+    const steps = [
+      'Analyzing AI patterns...',
+      'Replacing formal vocabulary...',
+      'Adding natural contractions...',
+      'Restructuring sentences...',
+      'Injecting human voice...',
+      'Varying rhythm & flow...',
+      'Breaking detection patterns...',
+      'Finalizing output...',
+    ];
+    
+    let stepIndex = 0;
+    const stepInterval = setInterval(() => {
+      if (stepIndex < steps.length) {
+        setProcessingStep(steps[stepIndex]);
+        stepIndex++;
+      }
+    }, 250);
+    
     setTimeout(() => {
-      const result = humanizeText(input);
+      clearInterval(stepInterval);
+      
+      let result = humanizeText(input);
+      
+      // If multi-pass, run again on the output for more aggressive humanization
+      if (multiPass) {
+        result = humanizeText(result);
+      }
+      
       setOutput(result);
       setStats(getHumanizationStats(input, result));
       setIsProcessing(false);
-    }, 1500 + Math.random() * 1000);
+      setProcessingStep('');
+    }, 2200);
   }, [input]);
+
+  const handleHumanize = useCallback(() => runHumanizer(false), [runHumanizer]);
+  const handleRehumanize = useCallback(() => runHumanizer(true), [runHumanizer]);
 
   const handleCopy = useCallback(() => {
     navigator.clipboard.writeText(output);
@@ -41,6 +74,7 @@ export default function Humanizer() {
     setInput('');
     setOutput('');
     setStats(null);
+    setPassCount(0);
   }, []);
 
   const wordCount = input.trim() ? input.trim().split(/\s+/).length : 0;
@@ -113,8 +147,10 @@ export default function Humanizer() {
                 <div className="relative">
                   <div className="w-12 h-12 rounded-full border-2 border-indigo-200 border-t-indigo-600 animate-spin"></div>
                 </div>
-                <p className="mt-4 text-sm text-gray-500 font-medium">Humanizing your content...</p>
-                <p className="mt-1 text-xs text-gray-400">Bypassing AI detection patterns</p>
+                <p className="mt-4 text-sm text-gray-700 font-medium">{processingStep || 'Humanizing your content...'}</p>
+                <p className="mt-1 text-xs text-gray-400">
+                  {passCount > 1 ? `Pass ${passCount} — Extra deep humanization` : 'Applying 10 transformation layers'}
+                </p>
               </div>
             ) : output ? (
               <p className="text-gray-800 text-[15px] leading-relaxed whitespace-pre-wrap">{output}</p>
@@ -126,7 +162,7 @@ export default function Humanizer() {
       </div>
 
       {/* Action Buttons */}
-      <div className="flex items-center justify-center gap-4 mt-6">
+      <div className="flex items-center justify-center gap-3 mt-6 flex-wrap">
         <button
           onClick={handleClear}
           disabled={!input && !output}
@@ -151,6 +187,20 @@ export default function Humanizer() {
             'Humanize Text'
           )}
         </button>
+        {output && (
+          <button
+            onClick={handleRehumanize}
+            disabled={!input.trim() || isProcessing}
+            className="px-6 py-3 text-sm font-semibold text-purple-700 bg-purple-50 border border-purple-200 rounded-xl hover:bg-purple-100 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+          >
+            <span className="flex items-center gap-2">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              Re-Humanize
+            </span>
+          </button>
+        )}
       </div>
 
       {/* Stats */}
@@ -161,46 +211,46 @@ export default function Humanizer() {
             <p className="text-xs text-gray-500 mt-1">Words</p>
           </div>
           <div className="bg-white border border-gray-100 rounded-xl p-4 text-center shadow-sm">
-            <p className="text-2xl font-bold text-purple-600">{stats.changesMade}</p>
+            <p className="text-2xl font-bold text-purple-600">{stats.changesMade}+</p>
             <p className="text-xs text-gray-500 mt-1">Changes Made</p>
           </div>
           <div className="bg-white border border-gray-100 rounded-xl p-4 text-center shadow-sm">
-            <p className="text-2xl font-bold text-emerald-600">{stats.readability}%</p>
-            <p className="text-xs text-gray-500 mt-1">Readability Score</p>
+            <div className="flex items-center justify-center gap-2">
+              <p className="text-2xl font-bold text-emerald-600">{stats.readability}%</p>
+              <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
+            </div>
+            <p className="text-xs text-gray-500 mt-1">Human Score</p>
           </div>
         </div>
       )}
 
-      {/* Features */}
-      <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="text-center p-6">
-          <div className="w-12 h-12 mx-auto mb-4 bg-indigo-50 rounded-xl flex items-center justify-center">
-            <svg className="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-            </svg>
-          </div>
-          <h3 className="font-semibold text-gray-900 mb-1">Bypass Detection</h3>
-          <p className="text-sm text-gray-500">Engineered to pass ZeroGPT, GPTZero, QuillBot and more</p>
-        </div>
-        <div className="text-center p-6">
-          <div className="w-12 h-12 mx-auto mb-4 bg-purple-50 rounded-xl flex items-center justify-center">
-            <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
-            </svg>
-          </div>
-          <h3 className="font-semibold text-gray-900 mb-1">Instant Processing</h3>
-          <p className="text-sm text-gray-500">Get humanized content in seconds with no wait time</p>
-        </div>
-        <div className="text-center p-6">
-          <div className="w-12 h-12 mx-auto mb-4 bg-emerald-50 rounded-xl flex items-center justify-center">
-            <svg className="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-          </div>
-          <h3 className="font-semibold text-gray-900 mb-1">Natural Output</h3>
-          <p className="text-sm text-gray-500">Maintains meaning while sounding authentically human</p>
+      {/* How it works */}
+      <div className="mt-12">
+        <h2 className="text-center text-lg font-bold text-gray-900 mb-6">How It Bypasses Detection</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {[
+            { icon: '🔄', title: '10-Pass Engine', desc: 'Vocabulary, structure, rhythm, voice — all transformed' },
+            { icon: '🎯', title: 'Pattern Breaking', desc: 'Destroys AI sentence patterns detectors look for' },
+            { icon: '💬', title: 'Natural Voice', desc: 'Adds contractions, fillers, and human speech patterns' },
+            { icon: '📊', title: 'Burstiness Injection', desc: 'Varies sentence length to mimic human writing rhythm' },
+          ].map((item, i) => (
+            <div key={i} className="bg-white border border-gray-100 rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow">
+              <span className="text-2xl">{item.icon}</span>
+              <h3 className="font-semibold text-gray-900 mt-2 text-sm">{item.title}</h3>
+              <p className="text-xs text-gray-500 mt-1">{item.desc}</p>
+            </div>
+          ))}
         </div>
       </div>
+
+      {/* Re-humanize tip */}
+      {output && passCount < 2 && (
+        <div className="mt-6 bg-amber-50 border border-amber-200 rounded-xl p-4 text-center">
+          <p className="text-sm text-amber-800">
+            <span className="font-semibold">💡 Tip:</span> If the output still feels AI-like, click <strong>Re-Humanize</strong> for an extra-deep transformation pass.
+          </p>
+        </div>
+      )}
     </div>
   );
 }
